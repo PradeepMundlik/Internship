@@ -22,6 +22,10 @@
         exit;
     }
 
+    if($_SERVER["REQUEST_METHOD"]=='GET' && isset($_GET['alert'])){
+        echo $_GET['alert'];
+    }
+
     $DATABASE_HOST = 'localhost';
     $DATABASE_USER = 'pradeep';
     $DATABASE_PASS = '12345678';
@@ -49,7 +53,6 @@
         if ($_POST['role'] == 'patient') {
             $query = 'SELECT id, password FROM patients WHERE username = ? OR email = ?';
         }
-
         $stmt = $con->prepare($query);
         $stmt->bind_param('ss', $_POST['username'], $_POST['username']);
         $stmt->execute();
@@ -65,9 +68,9 @@
                 $_SESSION['id'] = $id;
                 $_SESSION['role'] = $_POST['role'];
 
-                if ($_POST['role'] === 'doctor') {
+                if ($_POST['role'] == 'doctor') {
                     header('Location: welcome_doctor.php');
-                } elseif ($_POST['role'] === 'patient') {
+                } else if ($_POST['role'] == 'patient') {
                     header('Location: welcome_patient.php');
                 }
 
@@ -100,7 +103,8 @@
                 <input type="radio" name="role" id="role_doctor" value="doctor" required> Doctor
             </label>
             <input type="submit" value="Login">
-            <p>Not yet registered? <a href="register.php">Register</a></p>
+            <p>Forget Password ? <a href="password_recovery.php">Click here</a> <br>
+                Not yet registered? <a href="register.php">Register</a></p>
         </form>
     </div>
 
