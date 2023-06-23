@@ -23,7 +23,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt->fetch();
         $from_email = 'ai21btech11022@iith.ac.in';
         $subject = 'Password Recovery';
-        $msg = 'Hello! This is password recovery mail';
+        $url = "http://localhost/Intern/reset_password.php?username=$username&email=$to_email";
+        $msg = 'Password Recovery link: '.$url;
 
         try{
             require_once 'password_recovery_config.php';
