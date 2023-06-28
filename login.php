@@ -15,16 +15,19 @@
     error_reporting(E_ALL);
     ini_set("display_errors", 1);
 
+    if($_SERVER["REQUEST_METHOD"]=='GET' && isset($_GET['alert'])){
+        $alert=$_GET['alert'];
+        echo $_GET['alert'];
+    }
+
     session_start();
     if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true) {
-        if ($_SESSION['role'] == 'doctor') header('Location: welcome_doctor.php');
-        else if ($_SESSION['role'] == 'patient') header('Location: welcome_patient.php');
+        if ($_SESSION['role'] == 'doctor') header('Location: welcome_doctor.php?alert='.$alert);
+        else if ($_SESSION['role'] == 'patient') header('Location: welcome_patient.php?alert='.$alert);
         exit;
     }
 
-    if($_SERVER["REQUEST_METHOD"]=='GET' && isset($_GET['alert'])){
-        echo $_GET['alert'];
-    }
+    
 
     $DATABASE_HOST = 'localhost';
     $DATABASE_USER = 'pradeep';

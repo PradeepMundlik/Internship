@@ -5,47 +5,48 @@ ini_set("display_errors", 1);
 
 require_once 'config.php';
 
-$username=$email="";
-
-if ($_SERVER['REQUEST_METHOD'] == 'GET') {
-
-    if (isset($_GET['username'], $_GET['email'])) {
-        $stmt = $con->prepare("SELECT * FROM doctors WHERE email=? and username=?");
-        $stmt->bind_param('ss', $_GET['email'], $_GET['username']);
-        $stmt->execute();
-        $stmt->store_result();
-
-        if ($stmt->num_rows() <= 0) {
-            $alert = '<div class="alert alert-danger" role="alert">Invalid username or email</div>';
-            header("Location: http://localhost/Intern/login.php?alert=$alert");
-        }
-        $stmt->close();
-
-        $username = $_GET['username'];
-        $email = $_GET['email'];
-
-    } else {
-        header('Location: password_recovery.php');
-    }
-}
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if(empty($username) || empty($email)){
-        header('Location: password_recovery.php');
-    }
-    if (isset($_POST['password'], $_POST['cpassword'])) {
+
+    if (isset($_POST['password'], $_POST['cpassword'], $_POST['token'])) {
         if ($_POST['password'] != $_POST['cpassword']) {
             echo '<div class="alert alert-danger" role="alert">Passwords are not matching</div>';
         } else {
-            $stmt = $con->prepare('UPDATE doctors SET password=? WHERE username=? ');
-            // $hashed_password = password_hash($_POST['password'], PASSWORD_DEFAULT);
-            $hashed_password=$_POST['password'];
-            $stmt->bind_param('sss', $hashed_password, $username, $email);
-            $flag = $stmt->execute();
-            if ($flag) {
-                $alert = '<div class="alert alert-success" role="alert">Successfully Changed Passsword</div>';
-                header("Location: http://localhost/Intern/login.php?alert=$alert");
+            $stmt = $con->prepare("SELECT username, email,time,role FROM recovery WHERE token=?");
+            $stmt->bind_param('s', $_POST['token']);
+            $stmt->execute();
+            $stmt->store_result();
+            if ($stmt->num_rows() > 0) {
+                $stmt->bind_result($username, $email, $time, $role);
+                $stmt->fetch();
+                $curr_time = date('U');
+                if ($curr_time - $time > 600) {
+                    $alert = '<div class="alert alert-danger" role="alert">Link Expired! Please request again</div>';
+                    header('Location: http://localhost/Intern/password_recovery.php?alert=' . $alert);
+                } else {
+                    if ($role == 'doctor') {
+                        $query = 'UPDATE doctors SET password=? WHERE username=? or email=?;';
+                    } else {
+                        $query = 'UPDATE patients SET password=? WHERE username=? or email=?;';
+                    }
+                    $stmt = $con->prepare($query);
+                    $hashed_password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+                    $stmt->bind_param('sss', $hashed_password, $username, $email);
+                    $flag = $stmt->execute();
+                    if ($flag) {
+
+                        $stmt = $con->prepare("DELETE FROM recovery WHERE token=?");
+                        $stmt->bind_param('s', $_POST['token']);
+                        $stmt->execute();
+
+                        $alert = '<div class="alert alert-success" role="alert">Successfully Changed Passsword</div>';
+                        header('Location: http://localhost/Intern/login.php?alert=' . $alert);
+                    } else {
+                        echo '<div class="alert alert-danger" role="alert">Error!</div>';
+                    }
+                }
             } else {
-                echo '<div class="alert alert-danger" role="alert">Error!</div>';
+                $alert = '<div class="alert alert-danger" role="alert">Invalid Url! Please request again</div>';
+                header("Location: password_recovery.php?alert=" . $alert);
             }
         }
     } else {
@@ -71,11 +72,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <div class="register">
         <h1>Reset</h1>
         <form action="reset_password.php" method="post">
+
+            <?php
+            if ($_SERVER['REQUEST_METHOD'] == 'GET') {
+
+                if (isset($_GET['token'])) {
+
+                    echo '<input type="hidden" name="token" id="token" value="' . $_GET['token'] . '">';
+                } else {
+                    exit("Set token");
+                }
+            }
+            ?>
+
             <label for="password">Password:</label>
             <input type="password" name="password" id="password" required>
 
             <label for="cpassword">Confirmed Password:</label>
             <input type="password" name="cpassword" id="cpassword" required>
+
             <input type="submit" value="Reset">
             <p><a href="login.php">Click Here to Login</a></p>
         </form>

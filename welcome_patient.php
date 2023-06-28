@@ -22,8 +22,12 @@
     }
 
     $username = $_SESSION['username'];
-    ?>
 
+    if($_SERVER["REQUEST_METHOD"]=='GET' && isset($_GET['alert'])){
+        echo $_GET['alert'];
+    }
+    ?>
+    
     <div class="dashboard">
         <h1>Welcome, <?php echo $username; ?>!</h1>
         <h2>Patient Dashboard</h2>
@@ -32,6 +36,7 @@
             <li><a href="doctors.php">Doctors</a></li>
             <li><a href="medical_records.php">Medical Records</a></li>
             <li><a href="patient_details.php">Complete Your Details</a></li>
+            <li><a href="change_password.php?email=<?php echo $username; ?>&role=patient">Click Here to change password</a></li>
             <!-- Add more patient-specific features here -->
         </ul>
         <a href="logout.php">Logout</a>

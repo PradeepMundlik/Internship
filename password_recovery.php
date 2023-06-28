@@ -10,7 +10,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && (!isset($_POST['email']) || empty($_
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
-    $query = 'SELECT email, username from doctors where email=?';
+    if ($_POST['role'] == 'doctor') {
+        $query = 'SELECT email, username from doctors where email=?';
+    } else {
+        $query = 'SELECT email, username from patients where email=?';
+    }
     $stmt = $con->prepare($query);
     $stmt->bind_param('s', $_POST['email']);
     $stmt->execute();
@@ -19,14 +23,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if ($stmt->num_rows <= 0) {
         echo '<div class="alert alert-danger" role="alert">This email id is not registered. Please <a href="register.php">Click here</a> to register</div>';
     } else {
-        $stmt->bind_result($to_email,$username);
+        $stmt->bind_result($to_email, $username);
         $stmt->fetch();
+
+        $stmt = $con->prepare("DELETE FROM recovery WHERE email=? and role=?");
+        $stmt->bind_param('ss', $_POST['email'], $_POST['role']);
+        $stmt->execute();
+
+        $query = 'INSERT INTO `recovery`(`role`, `token`, `username`, `email`, `time`) VALUES (?,?,?,?,?);';
+        $stmt = $con->prepare($query);
+        $token = bin2hex(random_bytes(32));
+        $role = $_POST['role'];
+        $time = date("U");
+        $stmt->bind_param('ssssi', $role, $token, $username, $to_email, $time);
+        $stmt->execute();
+        $stmt->store_result();
         $from_email = 'ai21btech11022@iith.ac.in';
         $subject = 'Password Recovery';
-        $url = "http://localhost/Intern/reset_password.php?username=$username&email=$to_email";
-        $msg = 'Password Recovery link: '.$url;
+        $url = "http://localhost/Intern/reset_password.php?token=" . $token;
+        $msg = 'Password Recovery link: ' . $url . ' Note that this link is valid only for 10 mins';
 
-        try{
+        try {
             require_once 'password_recovery_config.php';
 
             //Recipients
@@ -48,9 +65,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             // $mail->AltBody = 'This is the body in plain text for non-HTML mail clients';
 
             $mail->send();
-             $alert='<div class="alert alert-success" role="alert">Recovery mail sent successfully <a href="https://mail.google.com/">Click here</a> to check mail</div>';
-             header("Location: http://localhost/Intern/login.php?alert=$alert");
-        } catch(Exception $e){
+            $alert = '<div class="alert alert-success" role="alert">Recovery mail sent successfully <a href="https://mail.google.com/">Click here</a> to check mail</div>';
+            header("Location: http://localhost/Intern/login.php?alert=$alert");
+        } catch (Exception $e) {
             echo "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
         }
     }
@@ -69,11 +86,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 </head>
 
 <body>
+    <?php
+    if ($_SERVER["REQUEST_METHOD"] == 'GET' && isset($_GET['alert'])) {
+        echo $_GET['alert'];
+    }
+    ?>
     <div class="register">
         <h1>Recover Your Account</h1>
         <form action="password_recovery.php" method="post">
             <label for="email">Enter Email:</label>
             <input type="text" name="email" id="email" required>
+
+            <label>Role:</label>
+            <label for="role_patient">
+                <input type="radio" name="role" id="role_patient" value="patient" required> Patient
+            </label>
+            <label for="role_doctor">
+                <input type="radio" name="role" id="role_doctor" value="doctor" required> Doctor
+            </label>
+
             <input type="submit" value="Send Mail" class="btn btn-primary">
             <p><a href="login.php">Click Here to Login</a> <br>
                 <a href="register.php">Click Here to Register</a>
